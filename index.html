@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Appliance Package Builder</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#1D9E75;--accent-light:#E1F5EE;--accent-dark:#0F6E56;
+  --bg:#fff;--bg2:#f8f8f6;--bg3:#f2f2ef;
+  --text:#1a1a1a;--text2:#555;--text3:#888;
+  --border:#e0e0da;--border2:#c8c8c2;
+  --radius:8px;--radius-lg:12px;
+  --danger:#E24B4A;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg3);min-height:100vh}
+.app{display:flex;flex-direction:column;min-height:100vh;max-width:900px;margin:0 auto;background:var(--bg);border-left:0.5px solid var(--border);border-right:0.5px solid var(--border)}
+.topbar{display:flex;align-items:center;gap:10px;padding:14px 24px;border-bottom:0.5px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:100}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{color:#fff}
+.logo-text{font-size:15px;font-weight:500;color:var(--text)}
+.stepper{display:flex;align-items:center;padding:0 24px;border-bottom:0.5px solid var(--border);overflow-x:auto;background:var(--bg2)}
+.step{display:flex;align-items:center;flex-shrink:0}
+.step-btn{display:flex;align-items:center;gap:7px;padding:11px 10px;font-size:12px;color:var(--text3);border:none;background:none;cursor:default;white-space:nowrap;font-family:inherit}
+.step-btn.active{color:var(--accent);font-weight:500}
+.step-btn.done{color:var(--text2);cursor:pointer}
+.step-dot{width:20px;height:20px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:var(--text3);flex-shrink:0}
+.step-btn.active .step-dot{background:var(--accent);color:#fff}
+.step-btn.done .step-dot{background:var(--accent);color:#fff}
+.step-sep{width:16px;height:0.5px;background:var(--border);flex-shrink:0}
+.progress-bar{height:3px;background:var(--border)}
+.progress-fill{height:100%;background:var(--accent);transition:width .4s}
+.content{flex:1;padding:32px 24px 140px;max-width:720px;width:100%;margin:0 auto}
+.section-title{font-size:22px;font-weight:500;color:var(--text);margin-bottom:6px}
+.section-sub{font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.5}
+.fg{margin-bottom:20px}
+.fl{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:7px;display:flex;align-items:center;gap:4px}
+.req{color:var(--danger)}
+input[type=text],input[type=email],input[type=tel],select,textarea{width:100%;height:38px;border:0.5px solid var(--border2);border-radius:var(--radius);padding:0 12px;font-size:14px;color:var(--text);background:var(--bg);font-family:inherit;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(29,158,117,.12)}
+textarea{height:80px;padding:10px 12px;resize:vertical;line-height:1.5}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.err{font-size:12px;color:var(--danger);margin-top:5px}
+.chip-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chip{padding:7px 14px;border:0.5px solid var(--border2);border-radius:999px;font-size:13px;color:var(--text2);cursor:pointer;background:var(--bg);user-select:none;transition:all .13s}
+.chip.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chip:hover:not(.sel){border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+
+/* ── Room cards ─────────────────────────────────────── */
+.room-row{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap}
+.room-card{border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all .15s;background:var(--bg);flex:1;min-width:180px}
+.room-card.sel{border-color:var(--accent);background:var(--accent-light);border-width:1.5px}
+.room-card-ico{width:40px;height:40px;border-radius:10px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text2)}
+.room-card.sel .room-card-ico{background:rgba(29,158,117,.12);color:var(--accent-dark)}
+.room-card-name{font-size:14px;font-weight:500;color:var(--text)}
+.room-card-desc{font-size:12px;color:var(--text3);margin-top:2px}
+
+/* ── Appliance cards ────────────────────────────────── */
+.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;margin-top:8px}
+.app-card{border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:18px 12px 14px;cursor:pointer;background:var(--bg);text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .17s;position:relative}
+.app-card:hover{border-color:var(--accent);background:var(--accent-light);transform:translateY(-1px)}
+.app-card.sel{border-color:var(--accent);background:var(--accent-light);border-width:1.5px;transform:translateY(-1px)}
+.app-card-svg{width:52px;height:52px;display:flex;align-items:center;justify-content:center;margin-bottom:2px;color:var(--text3)}
+.app-card.sel .app-card-svg{color:var(--accent-dark)}
+.app-card-svg svg{width:100%;height:100%}
+.app-card-name{font-size:13px;font-weight:500;color:var(--text)}
+.app-card.sel .app-card-name{color:var(--accent-dark)}
+.app-card-desc{font-size:11px;color:var(--text3);line-height:1.4}
+.app-card.sel .app-card-desc{color:var(--accent)}
+.check-badge{position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
+.app-card.sel .check-badge{opacity:1}
+
+/* ── Appliance detail sections ──────────────────────── */
+.appl-section{border:0.5px solid var(--border2);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden}
+.appl-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg2);border-bottom:0.5px solid var(--border)}
+.appl-hdr-ico{width:26px;height:26px;flex-shrink:0;color:var(--accent)}
+.appl-hdr-ico svg{width:100%;height:100%}
+.appl-hdr-name{font-size:14px;font-weight:500;color:var(--text)}
+.appl-body{padding:16px}
+.sm-chip{padding:5px 11px;font-size:12px}
+
+/* ── Budget tabs ────────────────────────────────────── */
+.budget-tabs{display:flex;border:0.5px solid var(--border2);border-radius:var(--radius);overflow:hidden;width:fit-content;margin-bottom:20px}
+.budget-tab{padding:8px 22px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;background:var(--bg);border:none;font-family:inherit;transition:all .15s}
+.budget-tab.active{background:var(--accent);color:#fff}
+.budget-tab:not(:last-child){border-right:0.5px solid var(--border2)}
+.budget-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.budget-card{border:0.5px solid var(--border2);border-radius:var(--radius);padding:14px 16px;cursor:pointer;background:var(--bg);transition:all .15s}
+.budget-card:hover{border-color:var(--accent);background:var(--accent-light)}
+.budget-card.sel{border-color:var(--accent);background:var(--accent-light);border-width:1.5px}
+.budget-hdr{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.budget-emoji{width:28px;height:28px;border-radius:6px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.budget-card.sel .budget-emoji{background:rgba(29,158,117,.12)}
+.budget-label{font-size:13px;font-weight:500;color:var(--text)}
+.budget-tip{font-size:11px;color:var(--text3);line-height:1.4;margin-bottom:5px}
+.budget-badge{font-size:10px;font-weight:500;color:var(--accent-dark);background:var(--accent-light);padding:2px 8px;border-radius:999px;display:inline-block}
+.budget-card.sel .budget-badge{background:rgba(29,158,117,.18)}
+
+/* per-appliance budget rows */
+.pa-rows{border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:4px 16px;margin-bottom:20px}
+.pa-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:0.5px solid var(--border)}
+.pa-row:last-child{border-bottom:none}
+.pa-ico{width:30px;height:30px;border-radius:8px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent)}
+.pa-ico svg{width:18px;height:18px}
+.pa-name{font-size:13px;font-weight:500;color:var(--text);min-width:110px}
+.pa-chips{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+.pa-chip{padding:4px 10px;border:0.5px solid var(--border2);border-radius:999px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--bg);transition:all .12s}
+.pa-chip.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* summary & consent */
+.divider{height:0.5px;background:var(--border);margin:24px 0}
+.sum-card{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;background:var(--bg2)}
+.sum-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px}
+.sum-row{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:13px}
+.sum-key{color:var(--text2)}
+.sum-val{color:var(--text);font-weight:500;text-align:right;max-width:60%}
+.tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500;background:var(--accent-light);color:var(--accent-dark);margin:2px}
+.consent-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:14px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg2)}
+.consent-cb{margin-top:2px;accent-color:var(--accent);width:16px;height:16px;cursor:pointer;flex-shrink:0}
+.consent-text{font-size:13px;color:var(--text2);line-height:1.5}
+
+/* bottom bar */
+.bottombar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:900px;background:var(--bg);border-top:0.5px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;z-index:99}
+.btn-back{padding:9px 20px;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:14px;color:var(--text2);background:transparent;cursor:pointer;font-family:inherit}
+.btn-back:hover{background:var(--bg2)}
+.btn-cont{padding:9px 28px;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;color:#fff;background:var(--accent);cursor:pointer;font-family:inherit}
+.btn-cont:hover{background:var(--accent-dark)}
+
+/* success */
+.success-screen{display:flex;flex-direction:column;align-items:center;padding:60px 24px;text-align:center;gap:16px}
+.success-ico{width:64px;height:64px;border-radius:50%;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--accent-dark)}
+</style>
+</head>
+<body>
+<div class="app" id="root"></div>
+<script>
+// ─── SVG icon library ─────────────────────────────────────────────────────
+const ICONS = {
+  refrigerator:`<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="4" width="28" height="40" rx="3" stroke="currentColor" stroke-width="2.2"/><line x1="10" y1="20" x2="38" y2="20" stroke="currentColor" stroke-width="2"/><line x1="18" y1="10" x2="18" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18" y1="26" x2="18" y2="34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+  range:`<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="10" width="36" height="34" rx="3" stroke="currentColor" stroke-width="2.2"/><rect x="11" y="18" width="26" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><circle cx="14" cy="13" r="2.5" stroke="currentColor" stroke-width="1.8"/><circle cx="24" cy="13" r="2.5" stroke="currentColor" stroke-width="1.8"/><circle cx="34" cy="13" r="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M20 5 Q24 2 28 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`,
+  cooktop:`<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="10" width="40" height="28" rx="3" stroke="currentColor" stroke-width="2.2"/><circle cx="16" cy="20" r="5" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="20" r="2" fill="currentColor" opacity=".35"/><circle cx="32" cy="20" r="5" stroke="currentColor" stroke-width="1.8"/><circle cx="32" cy="20" r="2" fill="currentColor" opacity=".35"/><circle cx="16" cy="32" r="4" stroke="currentColor" stroke-width="1.8"/><circle cx="32" cy="32" r="4" stroke="currentColor" stroke-width="1.8"/></svg>`,
+  wall_oven:`<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="4" width="36" height="40" rx="3" stroke="currentColor" stroke-width="2.2"/><rect x="11" y="16" width="26" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><line x1="11" y1="10" x2="37" y2="10" stroke="currentColor" stroke-width="1.5"/><circle cx="17" cy="10" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="31" cy="10" r="2" stroke="currentColor" stroke-width="1.5"/><line x1="15" y1="26" x2="33" y2="26" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"/></svg>`,
+  dishwasher:`<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="6" width="32" height="38" rx="3" stroke="currentColor" stroke-width="2.2"/><line x1="8" y1="16" x2="40" y2="16" stroke="currentColor" stroke-width="1.5"/><circle cx="24" cy="30" r="8" stroke="currentColor" stroke-width="1.8"/><circle cx="24" cy="30" r="3" stroke="currentColor" stroke-width="1.5"/><line x1="24" y1="22" x2="24" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="24" y1="34" x2="24" y2="38" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="30" x2="20" y2="30" stroke="currentColor" stroke-width="1.5"/><line x1="28" y1="30" x2="32" y2="30" stroke="currentColor" stroke-width="1.5"/><circle cx="17" cy="11" r="1.5" fill="currentColor" opacity=".5"/><circle cx="24" cy="11" r="1.5" fill="currentColor" opacity=".5"/></svg>`,
+  otr_microwave:`<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="10" width="40" height="24" rx="3" stroke="currentColor" stroke-width="2.2"/><rect x="8" y="14" width="22" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="36" cy="19" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="36" cy="26" r="2" stroke="currentColor" stroke-width="1.5"/><line x1="32" y1="22" x2="40" y2="22" stroke="currentColor" stroke-width="1" opacity=".4"/><path d="M13 35 L10 43 M24 35 L24 43 M35 35 L38 43" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".45"/></svg>`,
+  range_hood:`<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 28 L14 10 H34 L40 28 Z" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linejoin="round"/><rect x="14" y="28" width="20" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/><line x1="18" y1="28" x2="18" y2="36" stroke="currentColor" stroke-width="1"/><line x1="24" y1="28" x2="24" y2="36" stroke="currentColor" stroke-width="1"/><line x1="30" y1="28" x2="30" y2="36" stroke="currentColor" stroke-width="1"/><path d="M20 4 Q24 8 20 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".45"/><path d="M28 4 Q32 8 28 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".45"/></svg>`,
+  washer:`<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="36" height="38" rx="3" stroke="currentColor" stroke-width="2.2"/><line x1="6" y1="16" x2="42" y2="16" stroke="currentColor" stroke-width="1.5"/><circle cx="24" cy="30" r="9" stroke="currentColor" stroke-width="1.8"/><circle cx="24" cy="30" r="4" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="11" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="19" cy="11" r="1.5" fill="currentColor" opacity=".4"/><path d="M22 30 Q24 26 26 30 Q28 34 30 30" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>`,
+  dryer:`<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="36" height="38" rx="3" stroke="currentColor" stroke-width="2.2"/><line x1="6" y1="16" x2="42" y2="16" stroke="currentColor" stroke-width="1.5"/><circle cx="24" cy="30" r="9" stroke="currentColor" stroke-width="1.8"/><circle cx="24" cy="30" r="3.5" stroke="currentColor" stroke-width="1.5"/><circle cx="24" cy="21.5" r="1.5" fill="currentColor" opacity=".55"/><circle cx="31.5" cy="25.5" r="1.5" fill="currentColor" opacity=".55"/><circle cx="16.5" cy="25.5" r="1.5" fill="currentColor" opacity=".55"/><circle cx="34" cy="11" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="14" cy="11" r="1.5" fill="currentColor" opacity=".4"/></svg>`,
+  kitchen:`<svg viewBox="0 0 48 48" fill="none"><path d="M8 40V20L24 8L40 20V40H28V30H20V40Z" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linejoin="round"/></svg>`,
+  laundry:`<svg viewBox="0 0 48 48" fill="none"><rect x="8" y="8" width="32" height="32" rx="3" stroke="currentColor" stroke-width="2.2"/><circle cx="24" cy="24" r="9" stroke="currentColor" stroke-width="1.8"/><circle cx="24" cy="24" r="4" stroke="currentColor" stroke-width="1.5"/></svg>`,
+};
+
+const APPLIANCES=[
+  {k:'refrigerator',l:'Refrigerator',desc:'Fridge & freezer for your kitchen'},
+  {k:'range',l:'Range / Stove',desc:'Cooktop + oven combo, gas or electric'},
+  {k:'cooktop',l:'Cooktop',desc:'Surface only, pairs with wall oven'},
+  {k:'wall_oven',l:'Wall Oven',desc:'Built-in oven, single or double'},
+  {k:'dishwasher',l:'Dishwasher',desc:'Built-in or portable'},
+  {k:'otr_microwave',l:'OTR Microwave',desc:'Over-range microwave with ventilation'},
+  {k:'range_hood',l:'Range Hood',desc:'Dedicated vent above cooktop'},
+  {k:'washer',l:'Washer',desc:'Top-load or front-load washing machine'},
+  {k:'dryer',l:'Dryer',desc:'Electric, gas or ventless dryer'},
+];
+
+const PA_BUDGETS=[
+  {v:'under_500',l:'Under $500'},{v:'500_1000',l:'$500–$1K'},
+  {v:'1000_2000',l:'$1K–$2K'},{v:'2000_3500',l:'$2K–$3.5K'},
+  {v:'3500_plus',l:'$3.5K+'},{v:'not_sure',l:'Not sure'},
+];
+
+const BUNDLE_BUDGETS=[
+  {v:'under_1000',l:'Under $1,000',emoji:'💰',tip:'Replacing one appliance quickly',badge:'Single appliance'},
+  {v:'1000_3000',l:'$1,000 – $3,000',emoji:'🛒',tip:'Washer/dryer pair or fridge + microwave',badge:'1–2 appliances'},
+  {v:'3000_5000',l:'$3,000 – $5,000',emoji:'🏠',tip:'Entry kitchen suite or laundry + dishwasher',badge:'Small package'},
+  {v:'5000_8000',l:'$5,000 – $8,000',emoji:'⭐',tip:'Good-value matching kitchen set with laundry',badge:'Mid-range package'},
+  {v:'8000_12000',l:'$8,000 – $12,000',emoji:'🏆',tip:'High-end brands, matching suite, energy efficient',badge:'Premium package'},
+  {v:'12000_plus',l:'$12,000+',emoji:'💎',tip:'Built-in columns, professional range, full suite',badge:'Luxury package'},
+  {v:'not_sure',l:'Not sure yet',emoji:'🤔',tip:'We\'ll suggest options at multiple price points',badge:'Help me explore'},
+];
+
+const STEPS=[{l:'Your info'},{l:'Project'},{l:'Appliances'},{l:'Details'},{l:'Budget'},{l:'Summary'}];
+
+const S={
+  step:0,errors:{},submitted:false,
+  first_name:'',last_name:'',email:'',phone:'',city:'',province:'',postal_code:'',
+  preferred_contact:'',lead_source:'',
+  project_type:'',occupancy_type:'',timeline:'',priority_primary:'',
+  room_scope:[],selected_appliances:[],det:{},
+  measurements_ready:'',delivery_stairs:'',delivery_remove_old:'',delivery_installation:'',
+  budget_mode:'bundle',budget_range:'',appl_budgets:{},
+  colour_preference:'',promo_interest:'',brand_flexible:'',open_box_ok:'',
+  customer_notes:'',consent_contact:false,consent_summary:false,
+};
+
+// ─── DOM helpers ──────────────────────────────────────────────────────────
+function mk(tag,cls,html){
+  const e=document.createElement(tag);
+  if(cls)e.className=cls;
+  if(typeof html==='string')e.innerHTML=html;
+  return e;
+}
+const div=(cls,html)=>mk('div',cls,html);
+const span=(cls,t)=>{const e=mk('span',cls);e.textContent=t;return e;};
+const inp=(type,val,ph,onInput)=>{const e=mk('input');e.type=type;e.value=val||'';e.placeholder=ph||'';e.addEventListener('input',ev=>onInput(ev.target.value));return e;};
+const sel=(val,opts,onChange)=>{const e=mk('select');e.appendChild(Object.assign(mk('option'),'',{value:''}));opts.forEach(o=>{const op=mk('option');op.value=o.v;op.textContent=o.l;if(val===o.v)op.selected=true;e.appendChild(op);});e.addEventListener('change',ev=>onChange(ev.target.value));return e;};
+function svgDiv(cls,svgStr,sz){const d=mk('div',cls);d.innerHTML=svgStr;const s=d.querySelector('svg');if(s&&sz){s.style.width=sz;s.style.height=sz;}return d;}
+function errEl(k){if(!S.errors[k])return null;const e=mk('div','err');e.textContent=S.errors[k];return e;}
+function app(c,...nodes){nodes.forEach(n=>n&&c.appendChild(n));return c;}
+
+function fg(label,req,...nodes){
+  const g=mk('div','fg');
+  const lbl=mk('div','fl'); lbl.textContent=label;
+  if(req){const r=mk('span','req');r.textContent='*';lbl.appendChild(r);}
+  g.appendChild(lbl); nodes.forEach(n=>n&&g.appendChild(n)); return g;
+}
+
+function chips(key,opts,multi=false){
+  const g=mk('div','chip-grid');
+  opts.forEach(o=>{
+    const isSel=multi?(S[key]||[]).includes(o.v):S[key]===o.v;
+    const c=mk('div','chip'+(isSel?' sel':''));c.textContent=o.l;
+    c.addEventListener('click',()=>{
+      if(multi){const a=[...(S[key]||[])];const i=a.indexOf(o.v);i>=0?a.splice(i,1):a.push(o.v);S[key]=a;}
+      else{S[key]=S[key]===o.v?'':o.v;}
+      delete S.errors[key];render();
+    });
+    g.appendChild(c);
+  });
+  return g;
+}
+
+function detChips(ak,field,opts,multi=false){
+  if(!S.det[ak])S.det[ak]={};
+  const g=mk('div','chip-grid');
+  opts.forEach(o=>{
+    const d=S.det[ak]||{};
+    const isSel=multi?(d[field]||[]).includes(o.v):d[field]===o.v;
+    const c=mk('div','chip sm-chip'+(isSel?' sel':''));c.textContent=o.l;
+    c.addEventListener('click',()=>{
+      if(!S.det[ak])S.det[ak]={};
+      if(multi){const a=[...(S.det[ak][field]||[])];const i=a.indexOf(o.v);i>=0?a.splice(i,1):a.push(o.v);S.det[ak][field]=a;}
+      else{S.det[ak][field]=S.det[ak][field]===o.v?'':o.v;}
+      render();
+    });
+    g.appendChild(c);
+  });
+  return g;
+}
+
+function detQ(ak,field,label,opts,multi=false){
+  const g=mk('div','fg');g.style.marginBottom='10px';
+  const lbl=mk('div','fl');lbl.style.cssText='font-size:12px;margin-bottom:5px';lbl.textContent=label;
+  g.appendChild(lbl);g.appendChild(detChips(ak,field,opts,multi));return g;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────
+function render(){
+  const root=document.getElementById('root');
+  root.innerHTML='';root.appendChild(buildApp());
+}
+
+function validate(step){
+  const e={};
+  if(step===0){
+    if(!S.first_name.trim())e.first_name='Required';
+    if(!S.last_name.trim())e.last_name='Required';
+    if(!S.email.includes('@'))e.email='Valid email required';
+    if(!S.phone.trim())e.phone='Required';
+    if(!S.city.trim())e.city='Required';
+    if(!S.preferred_contact)e.preferred_contact='Please select one';
+    if(!S.lead_source)e.lead_source='Please select one';
+  } else if(step===1){
+    if(!S.project_type)e.project_type='Please select one';
+    if(!S.occupancy_type)e.occupancy_type='Please select one';
+    if(!S.timeline)e.timeline='Please select one';
+    if(!S.priority_primary)e.priority_primary='Please select one';
+  } else if(step===2){
+    if(!S.room_scope.length)e.room_scope='Select at least one room';
+    if(!S.selected_appliances.length)e.selected_appliances='Select at least one appliance';
+  } else if(step===4){
+    if(S.budget_mode==='bundle'&&!S.budget_range)e.budget_range='Please select a budget range';
+  } else if(step===5){
+    if(!S.consent_contact)e.consent_contact='Contact consent is required';
+    if(!S.consent_summary)e.consent_summary='Please confirm the summary is accurate';
+  }
+  return e;
+}
+
+// ── Google Sheets endpoint ────────────────────────────────────────────────
+const SHEETS_URL='https://script.google.com/macros/s/AKfycbxt5IaZ5L_2qr2xd3KBeLXI2_5PPCOpNDWHHEhC2MTS7ugfWrqPoI7pndzdnwXFp0WV4g/exec';
+
+async function submitToSheets(){
+  // Disable button and show loading state
+  const btn=document.querySelector('.btn-cont');
+  if(btn){btn.textContent='Saving…';btn.disabled=true;btn.style.opacity='0.7';}
+
+  const payload={
+    timestamp: new Date().toISOString(),
+    first_name:S.first_name, last_name:S.last_name,
+    email:S.email, phone:S.phone,
+    city:S.city, province:S.province, postal_code:S.postal_code,
+    preferred_contact:S.preferred_contact, lead_source:S.lead_source,
+    project_type:S.project_type, occupancy_type:S.occupancy_type,
+    timeline:S.timeline, priority_primary:S.priority_primary,
+    room_scope:(S.room_scope||[]).join(', '),
+    selected_appliances:(S.selected_appliances||[]).join(', '),
+    appliance_details:JSON.stringify(S.det||{}),
+    measurements_ready:S.measurements_ready,
+    delivery_stairs:S.delivery_stairs,
+    delivery_remove_old:S.delivery_remove_old,
+    delivery_installation:S.delivery_installation,
+    budget_mode:S.budget_mode,
+    budget_range:S.budget_mode==='bundle'?S.budget_range:JSON.stringify(S.appl_budgets||{}),
+    colour_preference:S.colour_preference,
+    promo_interest:S.promo_interest,
+    brand_flexible:S.brand_flexible,
+    open_box_ok:S.open_box_ok,
+    customer_notes:S.customer_notes,
+  };
+
+  try {
+    await fetch(SHEETS_URL,{
+      method:'POST',
+      mode:'no-cors', // required for Apps Script — response will be opaque but data saves
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),
+    });
+    // no-cors means we can't read the response status,
+    // but if fetch didn't throw the request reached Google
+    S.submitted=true;
+    render();
+  } catch(err){
+    if(btn){btn.textContent='Save profile';btn.disabled=false;btn.style.opacity='1';}
+    // Show inline error instead of alert
+    S.submitError=true;
+    render();
+  }
+}
+
+function goNext(){
+  const errs=validate(S.step);
+  if(Object.keys(errs).length){S.errors=errs;render();window.scrollTo(0,0);return;}
+  if(S.step===STEPS.length-1){submitToSheets();return;}
+  S.step++;S.errors={};render();window.scrollTo(0,0);
+}
+
+function buildApp(){
+  const wrap=mk('div','app');
+
+  // topbar
+  const tb=mk('div','topbar');
+  const li=mk('div','logo-icon');li.innerHTML='<svg width="16" height="16" fill="#fff" viewBox="0 0 24 24"><path d="M3 6a3 3 0 013-3h12a3 3 0 013 3v2a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm0 10a3 3 0 013-3h12a3 3 0 013 3v2a3 3 0 01-3 3H6a3 3 0 01-3-3v-2z"/></svg>';
+  const lt=mk('span','logo-text');lt.textContent='Appliance Package Builder';
+  app(tb,li,lt);wrap.appendChild(tb);
+
+  // progress
+  const pb=mk('div','progress-bar');const pf=mk('div','progress-fill');pf.style.width=(S.step/(STEPS.length-1)*100)+'%';pb.appendChild(pf);wrap.appendChild(pb);
+
+  // stepper
+  const st=mk('div','stepper');
+  STEPS.forEach((s,i)=>{
+    if(i>0){const sep=mk('div','step-sep');st.appendChild(sep);}
+    const cls=i<S.step?'done':i===S.step?'active':'';
+    const dot=mk('div','step-dot');dot.textContent=i<S.step?'✓':String(i+1);
+    const b=mk('button','step-btn '+cls);b.appendChild(dot);b.appendChild(document.createTextNode(s.l));
+    if(i<S.step)b.addEventListener('click',()=>{S.step=i;S.errors={};render();});
+    const sw=mk('div','step');sw.appendChild(b);st.appendChild(sw);
+  });
+  wrap.appendChild(st);
+
+  if(S.submitted){wrap.appendChild(buildSuccess());return wrap;}
+
+  const cnt=mk('div','content');cnt.appendChild([step0,step1,step2,step3,step4,step5][S.step]());wrap.appendChild(cnt);
+
+  const bar=mk('div','bottombar');
+  const bk=mk('button','btn-back');bk.textContent='Back';bk.style.visibility=S.step===0?'hidden':'visible';bk.addEventListener('click',()=>{if(S.step>0){S.step--;S.errors={};render();window.scrollTo(0,0);}});
+  const sl=mk('span','');sl.style.cssText='font-size:12px;color:var(--text3)';sl.textContent=`Step ${S.step+1} of ${STEPS.length}`;
+  const co=mk('button','btn-cont');co.textContent=S.step===STEPS.length-1?'Save profile':'Continue →';co.addEventListener('click',goNext);
+  app(bar,bk,sl,co);wrap.appendChild(bar);
+  return wrap;
+}
+
+// ── Steps ─────────────────────────────────────────────────────────────────
+function step0(){
+  const c=mk('div','');
+  app(c,mk('div','section-title',''), mk('div','section-sub',''));
+  c.querySelector('.section-title').textContent="Let's start with your details";
+  c.querySelector('.section-sub').textContent='Help us personalise your appliance recommendations.';
+  const r2=mk('div','row2');
+  const g1=fg('First name',true,inp('text',S.first_name,'Jane',v=>{S.first_name=v;delete S.errors.first_name;}),errEl('first_name'));
+  const g2=fg('Last name',true,inp('text',S.last_name,'Smith',v=>{S.last_name=v;delete S.errors.last_name;}),errEl('last_name'));
+  r2.appendChild(g1);r2.appendChild(g2);c.appendChild(r2);
+  c.appendChild(fg('Email address',true,inp('email',S.email,'jane@example.com',v=>{S.email=v;delete S.errors.email;}),errEl('email')));
+  c.appendChild(fg('Phone number',true,inp('tel',S.phone,'+1 (604) 555-0100',v=>{S.phone=v;delete S.errors.phone;}),errEl('phone')));
+  c.appendChild(fg('City',true,inp('text',S.city,'Vancouver',v=>{S.city=v;delete S.errors.city;}),errEl('city')));
+  const r2b=mk('div','row2');
+  r2b.appendChild(fg('Province',false,sel(S.province,[{v:'BC',l:'British Columbia'},{v:'AB',l:'Alberta'},{v:'ON',l:'Ontario'},{v:'QC',l:'Quebec'},{v:'MB',l:'Manitoba'},{v:'SK',l:'Saskatchewan'},{v:'NS',l:'Nova Scotia'},{v:'NB',l:'New Brunswick'},{v:'NL',l:'Newfoundland'},{v:'PE',l:'PEI'},{v:'YT',l:'Yukon'},{v:'NT',l:'NWT'},{v:'NU',l:'Nunavut'}],v=>S.province=v)));
+  r2b.appendChild(fg('Postal code',false,inp('text',S.postal_code,'V6B 1A1',v=>S.postal_code=v)));
+  c.appendChild(r2b);
+  const gpc=fg('Preferred contact method',true,chips('preferred_contact',[{v:'phone',l:'Phone'},{v:'text',l:'Text'},{v:'whatsapp',l:'WhatsApp'},{v:'email',l:'Email'}]),errEl('preferred_contact'));c.appendChild(gpc);
+  const gls=fg('How did you hear about us?',true,chips('lead_source',[{v:'website',l:'Website'},{v:'whatsapp',l:'WhatsApp'},{v:'facebook',l:'Facebook'},{v:'instagram',l:'Instagram'},{v:'google',l:'Google'},{v:'walk_in',l:'Walk-in'},{v:'referral',l:'Referral'},{v:'repeat_customer',l:'Returning customer'},{v:'other',l:'Other'}]),errEl('lead_source'));c.appendChild(gls);
+  return c;
+}
+
+function step1(){
+  const c=mk('div','');
+  const t=mk('div','section-title');t.textContent='Tell us about your project';
+  const s=mk('div','section-sub');s.textContent='This helps us understand what you need and when.';
+  c.appendChild(t);c.appendChild(s);
+  const g1=fg('What type of project is this?',true,chips('project_type',[{v:'new_home',l:'New home'},{v:'kitchen_renovation',l:'Kitchen reno'},{v:'laundry_renovation',l:'Laundry reno'},{v:'replace_broken',l:'Replace broken'},{v:'replace_old',l:'Replace old'},{v:'basement_suite',l:'Basement suite'},{v:'rental',l:'Rental'},{v:'condo',l:'Condo'},{v:'full_package',l:'Full package'},{v:'other',l:'Other'}]),errEl('project_type'));c.appendChild(g1);
+  const g2=fg('Personal or rental use?',true,chips('occupancy_type',[{v:'personal_home',l:'Personal home'},{v:'rental',l:'Rental'},{v:'basement_unit',l:'Basement unit'},{v:'short_term_rental',l:'Short-term rental'},{v:'builder_spec',l:'Builder/spec'},{v:'other',l:'Other'}]),errEl('occupancy_type'));c.appendChild(g2);
+  const g3=fg('When do you need the appliances?',true,chips('timeline',[{v:'immediately',l:'Immediately'},{v:'1_week',l:'Within 1 week'},{v:'2_weeks',l:'2 weeks'},{v:'1_month',l:'1 month'},{v:'1_3_months',l:'1–3 months'},{v:'3_plus_months',l:'3+ months'},{v:'planning',l:'Just planning'}]),errEl('timeline'));c.appendChild(g3);
+  const g4=fg('What matters most to you?',true,chips('priority_primary',[{v:'lowest_price',l:'Lowest price'},{v:'best_value',l:'Best value'},{v:'matching_set',l:'Matching set'},{v:'premium_look',l:'Premium look'},{v:'availability',l:'Available now'},{v:'energy_efficiency',l:'Energy efficient'},{v:'brand_reputation',l:'Brand reputation'},{v:'warranty_service',l:'Warranty'},{v:'not_sure',l:'Not sure'}]),errEl('priority_primary'));c.appendChild(g4);
+  return c;
+}
+
+function step2(){
+  const c=mk('div','');
+  const t=mk('div','section-title');t.textContent='Which appliances do you need?';
+  const s=mk('div','section-sub');s.textContent="Select all that apply. We'll ask tailored questions for each one.";
+  c.appendChild(t);c.appendChild(s);
+
+  // room cards
+  const grs=fg('Room scope',true);
+  const rrow=mk('div','room-row');
+  [{v:'kitchen',l:'Kitchen',desc:'Fridge, range, dishwasher & more',ico:'kitchen'},{v:'laundry',l:'Laundry room',desc:'Washer, dryer & stacking options',ico:'laundry'}].forEach(r=>{
+    const isSel=S.room_scope.includes(r.v);
+    const card=mk('div','room-card'+(isSel?' sel':''));
+    const ico=mk('div','room-card-ico');ico.innerHTML=ICONS[r.ico];const svg=ico.querySelector('svg');if(svg){svg.style.width='22px';svg.style.height='22px';}
+    const tx=mk('div','');
+    const n=mk('div','room-card-name');n.textContent=r.l;
+    const d=mk('div','room-card-desc');d.textContent=r.desc;
+    tx.appendChild(n);tx.appendChild(d);card.appendChild(ico);card.appendChild(tx);
+    card.addEventListener('click',()=>{const a=[...S.room_scope];const i=a.indexOf(r.v);i>=0?a.splice(i,1):a.push(r.v);S.room_scope=a;delete S.errors.room_scope;render();});
+    rrow.appendChild(card);
+  });
+  grs.appendChild(rrow);if(S.errors.room_scope)grs.appendChild(errEl('room_scope'));c.appendChild(grs);
+
+  // appliance cards
+  const gsa=fg('Select your appliances',true);
+  const note=mk('div','');note.style.cssText='font-size:12px;color:var(--text3);margin-bottom:10px';note.textContent='Tap to select — you can choose multiple';gsa.appendChild(note);
+  const grid=mk('div','app-grid');
+  APPLIANCES.forEach(a=>{
+    const isSel=S.selected_appliances.includes(a.k);
+    const card=mk('div','app-card'+(isSel?' sel':''));
+    const badge=mk('div','check-badge');badge.innerHTML='<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="2,5 4,7.5 8,2.5" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    card.appendChild(badge);
+    const svgW=mk('div','app-card-svg');svgW.innerHTML=ICONS[a.k]||'';
+    card.appendChild(svgW);
+    const nm=mk('div','app-card-name');nm.textContent=a.l;card.appendChild(nm);
+    const ds=mk('div','app-card-desc');ds.textContent=a.desc;card.appendChild(ds);
+    card.addEventListener('click',()=>{const arr=[...S.selected_appliances];const idx=arr.indexOf(a.k);idx>=0?arr.splice(idx,1):arr.push(a.k);S.selected_appliances=arr;delete S.errors.selected_appliances;render();});
+    grid.appendChild(card);
+  });
+  gsa.appendChild(grid);if(S.errors.selected_appliances)gsa.appendChild(errEl('selected_appliances'));c.appendChild(gsa);
+  return c;
+}
+
+function step3(){
+  const c=mk('div','');
+  const t=mk('div','section-title');t.textContent='Appliance details';
+  const s=mk('div','section-sub');s.textContent='"Not sure" is always valid — answer what you can.';
+  c.appendChild(t);c.appendChild(s);
+
+  const DEFS={
+    refrigerator:[{f:'style',l:'Style',o:[{v:'top_freezer',l:'Top freezer'},{v:'bottom_freezer',l:'Bottom freezer'},{v:'french_door',l:'French door'},{v:'side_by_side',l:'Side by side'},{v:'counter_depth',l:'Counter depth'},{v:'built_in',l:'Built-in'},{v:'not_sure',l:'Not sure'}]},{f:'width_nominal',l:'Width',o:[{v:'24',l:'24"'},{v:'30',l:'30"'},{v:'33',l:'33"'},{v:'36',l:'36"'},{v:'42',l:'42"'},{v:'48',l:'48"'},{v:'not_sure',l:'Not sure'}]},{f:'finish',l:'Finish',o:[{v:'stainless',l:'Stainless'},{v:'black_stainless',l:'Black stainless'},{v:'white',l:'White'},{v:'black',l:'Black'},{v:'panel_ready',l:'Panel ready'},{v:'no_preference',l:'No pref'}]},{f:'water_ice',l:'Water / ice',o:[{v:'none',l:'None'},{v:'ice_only',l:'Ice only'},{v:'external_water_ice',l:'Water & ice'},{v:'not_sure',l:'Not sure'}]}],
+    range:[{f:'type',l:'Range type',o:[{v:'electric',l:'Electric'},{v:'gas',l:'Gas'},{v:'induction',l:'Induction'},{v:'dual_fuel',l:'Dual fuel'},{v:'not_sure',l:'Not sure'}]},{f:'width_nominal',l:'Width',o:[{v:'24',l:'24"'},{v:'30',l:'30"'},{v:'36',l:'36"'},{v:'48',l:'48"'},{v:'not_sure',l:'Not sure'}]},{f:'control_style',l:'Controls',o:[{v:'back_control',l:'Back control'},{v:'front_control',l:'Front control'},{v:'slide_in_look',l:'Slide-in'},{v:'not_sure',l:'Not sure'}]},{f:'fuel_connection',l:'Connection available',o:[{v:'electric',l:'Electric'},{v:'gas',l:'Gas'},{v:'both',l:'Both'},{v:'not_sure',l:'Not sure'}]},{f:'features',l:'Features',multi:true,o:[{v:'air_fry',l:'Air fry'},{v:'convection',l:'Convection'},{v:'self_clean',l:'Self clean'},{v:'double_oven',l:'Double oven'},{v:'smart',l:'Smart'}]}],
+    dishwasher:[{f:'type',l:'Type',o:[{v:'built_in_24',l:'Built-in 24"'},{v:'compact_18',l:'Compact 18"'},{v:'portable',l:'Portable'},{v:'panel_ready',l:'Panel ready'},{v:'not_sure',l:'Not sure'}]},{f:'finish',l:'Finish',o:[{v:'stainless',l:'Stainless'},{v:'black_stainless',l:'Black stainless'},{v:'white',l:'White'},{v:'black',l:'Black'},{v:'no_preference',l:'No pref'}]},{f:'noise_class',l:'Noise level',o:[{v:'basic',l:'Basic'},{v:'quiet',l:'Quiet'},{v:'very_quiet',l:'Very quiet ≤45dB'},{v:'not_sure',l:'Not sure'}]},{f:'features',l:'Features',multi:true,o:[{v:'third_rack',l:'3rd rack'},{v:'heated_dry',l:'Heated dry'},{v:'sanitize',l:'Sanitize'},{v:'quick_wash',l:'Quick wash'},{v:'energy_efficient',l:'Energy star'}]}],
+    washer:[{f:'type',l:'Washer type',o:[{v:'top_load_agitator',l:'Top load agitator'},{v:'top_load_impeller',l:'Top load impeller'},{v:'front_load',l:'Front load'},{v:'compact',l:'Compact'},{v:'not_sure',l:'Not sure'}]},{f:'capacity_band',l:'Household size',o:[{v:'small_household',l:'1–2 people'},{v:'medium_household',l:'3–4 people'},{v:'large_family',l:'Family 5+'},{v:'not_sure',l:'Not sure'}]},{f:'features',l:'Features',multi:true,o:[{v:'steam',l:'Steam'},{v:'sanitize',l:'Sanitize'},{v:'large_capacity',l:'Large capacity'},{v:'smart',l:'Smart'},{v:'energy_efficient',l:'Energy star'}]}],
+    dryer:[{f:'type',l:'Dryer type',o:[{v:'electric',l:'Electric'},{v:'gas',l:'Gas'},{v:'ventless',l:'Ventless'},{v:'compact',l:'Compact'},{v:'not_sure',l:'Not sure'}]},{f:'vent_exists',l:'Outside vent available?',o:[{v:'yes',l:'Yes'},{v:'no',l:'No'},{v:'not_sure',l:'Not sure'}]},{f:'features',l:'Features',multi:true,o:[{v:'steam',l:'Steam'},{v:'sensor_dry',l:'Sensor dry'},{v:'large_capacity',l:'Large capacity'},{v:'wrinkle_prevention',l:'Wrinkle prevent'},{v:'smart',l:'Smart'}]}],
+    cooktop:[{f:'type',l:'Type',o:[{v:'electric',l:'Electric'},{v:'gas',l:'Gas'},{v:'induction',l:'Induction'},{v:'not_sure',l:'Not sure'}]},{f:'width_nominal',l:'Width',o:[{v:'24',l:'24"'},{v:'30',l:'30"'},{v:'36',l:'36"'},{v:'not_sure',l:'Not sure'}]},{f:'downdraft',l:'Need downdraft?',o:[{v:'yes',l:'Yes'},{v:'no',l:'No'},{v:'not_sure',l:'Not sure'}]}],
+    wall_oven:[{f:'type',l:'Type',o:[{v:'single',l:'Single'},{v:'double',l:'Double'},{v:'micro_combo',l:'Micro combo'},{v:'not_sure',l:'Not sure'}]},{f:'width_nominal',l:'Width',o:[{v:'24',l:'24"'},{v:'27',l:'27"'},{v:'30',l:'30"'},{v:'not_sure',l:'Not sure'}]},{f:'features',l:'Features',multi:true,o:[{v:'convection',l:'Convection'},{v:'air_fry',l:'Air fry'},{v:'self_clean',l:'Self clean'},{v:'steam',l:'Steam'},{v:'smart',l:'Smart'}]}],
+    otr_microwave:[{f:'width_nominal',l:'Width',o:[{v:'24',l:'24"'},{v:'30',l:'30"'},{v:'not_sure',l:'Not sure'}]},{f:'venting',l:'Venting',o:[{v:'vented_outside',l:'Vented outside'},{v:'recirculating',l:'Recirculating'},{v:'not_sure',l:'Not sure'}]},{f:'features',l:'Features',multi:true,o:[{v:'high_cfm',l:'High CFM'},{v:'sensor_cooking',l:'Sensor cooking'},{v:'large_capacity',l:'Large capacity'},{v:'convection',l:'Convection'}]}],
+    range_hood:[{f:'type',l:'Hood type',o:[{v:'under_cabinet',l:'Under cabinet'},{v:'wall_chimney',l:'Wall chimney'},{v:'island',l:'Island'},{v:'not_sure',l:'Not sure'}]},{f:'width_nominal',l:'Width',o:[{v:'24',l:'24"'},{v:'30',l:'30"'},{v:'36',l:'36"'},{v:'42',l:'42"'},{v:'not_sure',l:'Not sure'}]},{f:'venting',l:'Venting',o:[{v:'vented_outside',l:'Vented outside'},{v:'recirculating',l:'Recirculating'},{v:'not_sure',l:'Not sure'}]}],
+  };
+
+  S.selected_appliances.forEach(k=>{
+    const meta=APPLIANCES.find(a=>a.k===k);if(!meta)return;
+    const sec=mk('div','appl-section');
+    const hdr=mk('div','appl-hdr');
+    const hico=mk('div','appl-hdr-ico');hico.innerHTML=ICONS[k]||'';const hsvg=hico.querySelector('svg');if(hsvg){hsvg.style.width='24px';hsvg.style.height='24px';}
+    const hn=mk('div','appl-hdr-name');hn.textContent=meta.l;
+    hdr.appendChild(hico);hdr.appendChild(hn);
+    const body=mk('div','appl-body');
+    (DEFS[k]||[]).forEach(q=>body.appendChild(detQ(k,q.f,q.l,q.o,q.multi||false)));
+    sec.appendChild(hdr);sec.appendChild(body);c.appendChild(sec);
+  });
+
+  const dv=mk('div','divider');c.appendChild(dv);
+  const t2=mk('div','section-title');t2.style.cssText='font-size:16px;margin-bottom:14px';t2.textContent='Measurements & delivery';c.appendChild(t2);
+  c.appendChild(fg('Can you provide measurements?',false,chips('measurements_ready',[{v:'yes',l:'Yes'},{v:'no',l:'No'},{v:'photo_upload',l:"I'll upload photos"},{v:'need_help',l:'Need help'}])));
+  c.appendChild(fg('Stairs at delivery location?',false,chips('delivery_stairs',[{v:'none',l:'None'},{v:'few_steps',l:'A few steps'},{v:'one_flight',l:'One flight'},{v:'multiple_flights',l:'Multiple flights'},{v:'not_sure',l:'Not sure'}])));
+  c.appendChild(fg('Need old appliance removal?',false,chips('delivery_remove_old',[{v:'yes',l:'Yes'},{v:'no',l:'No'},{v:'maybe',l:'Maybe'}])));
+  c.appendChild(fg('Need installation?',false,chips('delivery_installation',[{v:'yes',l:'Yes'},{v:'no',l:'No'},{v:'maybe',l:'Maybe'},{v:'not_sure',l:'Not sure'}])));
+  return c;
+}
+
+function step4(){
+  const c=mk('div','');
+  const t=mk('div','section-title');t.textContent='Budget';c.appendChild(t);
+  const s=mk('div','section-sub');s.textContent="Set a budget per appliance, or give us a total package range — whichever's easier.";c.appendChild(s);
+
+  // mode tabs
+  const tabs=mk('div','budget-tabs');
+  [{v:'per_appliance',l:'Per appliance'},{v:'bundle',l:'Total package'}].forEach(m=>{
+    const tb=mk('button','budget-tab'+(S.budget_mode===m.v?' active':''));tb.textContent=m.l;
+    tb.addEventListener('click',()=>{S.budget_mode=m.v;delete S.errors.budget_range;render();});
+    tabs.appendChild(tb);
+  });
+  c.appendChild(tabs);
+
+  if(S.budget_mode==='per_appliance'){
+    const note=mk('div','');note.style.cssText='font-size:13px;color:var(--text2);margin-bottom:14px';note.textContent="Set a budget for each appliance you've selected. Leave \"Not sure\" if you're flexible on any.";c.appendChild(note);
+    const rows=mk('div','pa-rows');
+    const applList=S.selected_appliances.length?S.selected_appliances:APPLIANCES.map(a=>a.k);
+    applList.forEach(k=>{
+      const meta=APPLIANCES.find(a=>a.k===k)||{l:k,k};
+      const row=mk('div','pa-row');
+      const ico=mk('div','pa-ico');ico.innerHTML=ICONS[k]||'';const isvg=ico.querySelector('svg');if(isvg){isvg.style.width='18px';isvg.style.height='18px';}
+      const nm=mk('div','pa-name');nm.textContent=meta.l;
+      const chps=mk('div','pa-chips');
+      PA_BUDGETS.forEach(b=>{
+        const isSel=S.appl_budgets[k]===b.v;
+        const ch=mk('div','pa-chip'+(isSel?' sel':''));ch.textContent=b.l;
+        ch.addEventListener('click',()=>{S.appl_budgets[k]=S.appl_budgets[k]===b.v?'':b.v;render();});
+        chps.appendChild(ch);
+      });
+      row.appendChild(ico);row.appendChild(nm);row.appendChild(chps);rows.appendChild(row);
+    });
+    c.appendChild(rows);
+  } else {
+    const grid=mk('div','budget-grid');
+    BUNDLE_BUDGETS.forEach(o=>{
+      const card=mk('div','budget-card'+(S.budget_range===o.v?' sel':''));
+      const hdr=mk('div','budget-hdr');
+      const em=mk('div','budget-emoji');em.textContent=o.emoji;
+      const lbl=mk('div','budget-label');lbl.textContent=o.l;
+      hdr.appendChild(em);hdr.appendChild(lbl);
+      const tip=mk('div','budget-tip');tip.textContent=o.tip;
+      const badge=mk('div','budget-badge');badge.textContent=o.badge;
+      card.appendChild(hdr);card.appendChild(tip);card.appendChild(badge);
+      card.addEventListener('click',()=>{S.budget_range=o.v;delete S.errors.budget_range;render();});
+      grid.appendChild(card);
+    });
+    c.appendChild(grid);
+    if(S.errors.budget_range)c.appendChild(errEl('budget_range'));
+  }
+
+  c.appendChild(mk('div','divider'));
+  c.appendChild(fg('Overall finish preference',false,chips('colour_preference',[{v:'stainless',l:'Stainless'},{v:'black_stainless',l:'Black stainless'},{v:'white',l:'White'},{v:'black',l:'Black'},{v:'mixed',l:'Mixed'},{v:'no_preference',l:'No preference'}])));
+  c.appendChild(fg('Interested in promotional packages?',false,chips('promo_interest',[{v:'yes',l:'Yes'},{v:'no',l:'No'},{v:'maybe',l:'Maybe'},{v:'only_if_available',l:'If available'}])));
+  c.appendChild(fg('Flexible on brand to save money?',false,chips('brand_flexible',[{v:'yes',l:'Yes'},{v:'no',l:'No'},{v:'maybe',l:'Maybe'}])));
+  c.appendChild(fg('Open to clearance / open-box?',false,chips('open_box_ok',[{v:'yes',l:'Yes'},{v:'no',l:'New only'},{v:'depends_condition',l:'Depends on condition'}])));
+  const gn=fg('Anything else we should know?',false);
+  const ta=mk('textarea','');ta.placeholder='Special requirements, delivery notes, questions...';ta.textContent=S.customer_notes||'';ta.addEventListener('input',e=>S.customer_notes=e.target.value);gn.appendChild(ta);c.appendChild(gn);
+  return c;
+}
+
+function step5(){
+  const c=mk('div','');
+  // Show network error banner if a previous submit attempt failed
+  if(S.submitError){
+    const eb=mk('div','');
+    eb.style.cssText='background:#FCEBEB;border:0.5px solid #F09595;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#A32D2D;display:flex;align-items:flex-start;gap:10px;';
+    eb.innerHTML='<span style="font-size:18px;flex-shrink:0;">⚠️</span><div><strong>Connection issue.</strong> Your profile could not be saved. Please check your internet connection and try again. Your answers are still here.</div>';
+    c.appendChild(eb);
+    S.submitError=false;
+  }
+  const t=mk('div','section-title');t.textContent='Review your profile';
+  const s=mk('div','section-sub');s.textContent='Confirm everything looks correct before submitting.';
+  c.appendChild(t);c.appendChild(s);
+  const fmtV=v=>v?(v+'').replace(/_/g,' '):'—';
+
+  function sRow(k,v){const r=mk('div','sum-row');const ke=mk('span','sum-key');ke.textContent=k;const ve=mk('span','sum-val');ve.textContent=v||'—';r.appendChild(ke);r.appendChild(ve);return r;}
+  function sCard(title,...rows){const card=mk('div','sum-card');const t=mk('div','sum-title');t.textContent=title;card.appendChild(t);rows.forEach(r=>r&&card.appendChild(r));return card;}
+
+  c.appendChild(sCard('Contact information',sRow('Name',`${S.first_name} ${S.last_name}`),sRow('Email',S.email||'—'),sRow('Phone',S.phone||'—'),sRow('City',`${S.city||'—'} ${S.province||''}`),sRow('Contact via',fmtV(S.preferred_contact)),sRow('Lead source',fmtV(S.lead_source))));
+  c.appendChild(sCard('Project details',sRow('Project type',fmtV(S.project_type)),sRow('Use',fmtV(S.occupancy_type)),sRow('Timeline',fmtV(S.timeline)),sRow('Priority',fmtV(S.priority_primary))));
+
+  const ac=mk('div','sum-card');const at=mk('div','sum-title');at.textContent='Appliances selected';ac.appendChild(at);
+  const tw=mk('div','');S.selected_appliances.forEach(k=>{const tg=mk('span','tag');tg.textContent=k.replace(/_/g,' ');tw.appendChild(tg);});
+  ac.appendChild(tw);c.appendChild(ac);
+
+  const bc=mk('div','sum-card');const bt=mk('div','sum-title');bt.textContent='Budget';bc.appendChild(bt);
+  if(S.budget_mode==='bundle'){bc.appendChild(sRow('Package budget',fmtV(S.budget_range)));}
+  else{S.selected_appliances.forEach(k=>{const meta=APPLIANCES.find(a=>a.k===k);if(meta)bc.appendChild(sRow(meta.l,fmtV(S.appl_budgets[k]||'not set')));});}
+  bc.appendChild(sRow('Finish',fmtV(S.colour_preference)));bc.appendChild(sRow('Promos',fmtV(S.promo_interest)));c.appendChild(bc);
+
+  function conRow(id,sk,ek,html){
+    const row=mk('div','consent-row');const cb=mk('input','consent-cb');cb.type='checkbox';cb.id=id;cb.checked=S[sk];cb.addEventListener('change',e=>{S[sk]=e.target.checked;delete S.errors[ek];render();});
+    const lbl=mk('label','consent-text');lbl.setAttribute('for',id);lbl.innerHTML=html;
+    row.appendChild(cb);row.appendChild(lbl);
+    const wrap=mk('div','');wrap.appendChild(row);if(S.errors[ek])wrap.appendChild(errEl(ek));return wrap;
+  }
+  c.appendChild(conRow('cb-c','consent_contact','consent_contact','<strong>I agree</strong> that your store may contact me by phone, email, text, or WhatsApp to respond to this appliance request and provide a quote.'));
+  c.appendChild(conRow('cb-s','consent_summary','consent_summary','I confirm the information above is accurate.'));
+  const disc=mk('div','');disc.style.cssText='font-size:11px;color:var(--text3);margin-top:12px;line-height:1.5';disc.textContent='Pricing, promotions, stock, delivery, and installation are subject to confirmation at time of quote.';c.appendChild(disc);
+  return c;
+}
+
+function buildSuccess(){
+  const c=mk('div','content');const s=mk('div','success-screen');
+  const ico=mk('div','success-ico');ico.textContent='✓';
+  ico.style.background='#E1F5EE';ico.style.color='#0F6E56';
+  const title=mk('div','section-title');title.textContent='Profile saved!';
+  const sub=mk('div','section-sub');sub.style.maxWidth='420px';
+  sub.textContent=`Thanks, ${S.first_name}! Your appliance profile has been saved. We'll be in touch via ${(S.preferred_contact||'your preferred method').replace(/_/g,' ')} with personalised recommendations and a quote.`;
+  const next=mk('div','');next.style.cssText='background:var(--bg2);border-radius:var(--radius);padding:16px 20px;font-size:13px;color:var(--text2);width:100%;max-width:400px;text-align:left';
+  next.innerHTML='<div style="font-weight:500;margin-bottom:8px;color:var(--text)">What happens next</div><div style="margin-bottom:6px">1. We review your appliance preferences</div><div style="margin-bottom:6px">2. We match products to your needs and budget</div><div>3. You receive a personalised quote within 24–48 hours</div>';
+  const b=mk('button','btn-cont');b.textContent='Start a new profile';b.style.marginTop='8px';
+  b.addEventListener('click',()=>{Object.assign(S,{step:0,errors:{},submitted:false,submitError:false,first_name:'',last_name:'',email:'',phone:'',city:'',province:'',postal_code:'',preferred_contact:'',lead_source:'',project_type:'',occupancy_type:'',timeline:'',priority_primary:'',room_scope:[],selected_appliances:[],det:{},measurements_ready:'',delivery_stairs:'',delivery_remove_old:'',delivery_installation:'',budget_mode:'bundle',budget_range:'',appl_budgets:{},colour_preference:'',promo_interest:'',brand_flexible:'',open_box_ok:'',customer_notes:'',consent_contact:false,consent_summary:false});render();});
+  [ico,title,sub,next,b].forEach(n=>s.appendChild(n));c.appendChild(s);return c;
+}
+
+render();
+</script>
+</body>
+</html>
